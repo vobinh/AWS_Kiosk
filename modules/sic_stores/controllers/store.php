@@ -199,6 +199,65 @@ class Store_Controller extends Template_Controller {
 		return $data;
 	}
 
+	public function exportStore(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+					->setTitle("Export Store")
+					->setCategory("Export Store");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Store #')
+		->setCellValue('B1', 'Name')
+		->setCellValue('C1', 'Address')
+		->setCellValue('D1', 'Phone')
+		->setCellValue('E1', 'E-mail')
+		->setCellValue('F1', 'Added Date')
+		->setCellValue('G1', 'Notes')
+		->setCellValue('H1', 'Login Credentials')
+		->setCellValue('I1', 'Employees')
+		->setCellValue('J1', 'Status');
+
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+
+		$admin_id = $this->sess_cus['admin_id'];
+		$strSql = "SELECT store_id, s_no, s_address, s_address_2, store, s_city, s_state, s_zip, s_phone, s_email, regidate, s_notes, status, ";
+		$strSql .= "(SELECT COUNT(admin_id) FROM admin WHERE admin.store_id = store.store_id) as total_admin, ";
+		$strSql .= "(SELECT COUNT(access_id) FROM access WHERE access.store_id = store.store_id) as total_employees ";
+		$strSql .= "FROM store ";
+		$strSql .= "WHERE store.admin_id = '".$admin_id."' ";
+		$strSql .= "AND store_id IN(".$idSelected.")";
+		$result = $this->db->query($strSql)->result_array(false);
+		if(!empty($result)){
+			$rowCount = 2;
+			$column   = 'A';
+			foreach ($result as $key => $value) {
+				$address = $value['s_address'].' '.$value['s_address_2'].' '.$value['s_city'].', '.$value['s_state'].' '.$value['s_zip'];
+				$address = preg_replace('/\s\s+/', ' ', $address);
+
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, !empty($value['s_no'])?$value['s_no']:'');
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['store']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $address);
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, !empty($value['s_phone'])?$value['s_phone']:'');
+				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, !empty($value['s_email'])?$value['s_email']:'');
+				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, !empty($value['regidate'])?date_format(date_create($value['regidate']), "m/d/Y"):'');
+				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, !empty($value['s_notes'])?$value['s_notes']:'');
+				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, !empty($value['total_admin'])?$value['total_admin']:0);
+				$objPHPExcel->getActiveSheet()->setCellValue("I".$rowCount, !empty($value['total_employees'])?$value['total_employees']:0);
+				$objPHPExcel->getActiveSheet()->setCellValue("J".$rowCount, (!empty($value['status']) && $value['status'] == 2)?'Inactive':'Active');
+				$rowCount++;
+			}
+		}
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportStore_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
+		die();
+	}
+
 	public function jsStore(){
 
 		$iSearch        = $_POST['search']['value'];

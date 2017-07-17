@@ -153,6 +153,7 @@ class Home_Controller extends Template_Controller {
 				$week            = $this->week_from_sunday($today);
 				
 				/* API listOrderRange */
+				$this->db->select('order_num', 'amount', 'price', 'tax', 'cash', 'points', 'card', 'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('DATE(regidate) BETWEEN \''.date('Y-m-d', strtotime($week[0])).'\' AND \''.date('Y-m-d', strtotime($week[6])).'\'');
 				$this->db->where('order_num IS NOT NULL');
@@ -160,6 +161,7 @@ class Home_Controller extends Template_Controller {
 				$data = $this->db->get('order')->result_array(false);
 
 				/* API listUserRange */
+				$this->db->select('user_id' ,'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('DATE(regidate) BETWEEN \''.date('Y-m-d', strtotime($week[0])).'\' AND \''.date('Y-m-d', strtotime($week[6])).'\'');
 				$this->db->orderby('regidate', 'asc');
@@ -172,6 +174,7 @@ class Home_Controller extends Template_Controller {
 				$year            = date('Y');
 
 				/* API listOrderMonth */
+				$this->db->select('order_num', 'amount', 'price', 'tax', 'cash', 'points', 'card', 'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('MONTH(regidate) = \''.$month.'\' AND YEAR(regidate) = \''.$year.'\'');
 				$this->db->where('order_num IS NOT NULL');
@@ -179,6 +182,7 @@ class Home_Controller extends Template_Controller {
 				$data = $this->db->get('order')->result_array(false);
 				
 				/* API listUserMonth */
+				$this->db->select('user_id' ,'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('MONTH(regidate) = \''.$month.'\' AND YEAR(regidate) = \''.$year.'\'');
 				$this->db->orderby('regidate', 'asc');
@@ -192,31 +196,45 @@ class Home_Controller extends Template_Controller {
 				$today           = date('m/d/Y');
 
 				/* API listOrderRange */
+				$this->db->select('order_num', 'amount', 'price', 'tax', 'cash', 'points', 'card', 'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('DATE(regidate) BETWEEN \''.date('Y-m-d', strtotime($dateFrom)).'\' AND \''.date('Y-m-d', strtotime($dateTo)).'\'');
 				$this->db->where('order_num IS NOT NULL');
 				$this->db->orderby('regidate', 'asc');
 				$data = $this->db->get('order')->result_array(false);
-
+				
 				/* API listUserRange */
+				$this->db->select('user_id' ,'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('DATE(regidate) BETWEEN \''.date('Y-m-d', strtotime($dateFrom)).'\' AND \''.date('Y-m-d', strtotime($dateTo)).'\'');
 				$this->db->orderby('regidate', 'asc');
 				$dataUser = $this->db->get('user')->result_array(false);
-
 				$dataFormat = 'm/d/Y';
 				break;
 			default:
 				$today = date('Y-m-d');
     			
 				/* API listOrderToday */
+				$this->db->select('order_num', 'amount', 'price', 'tax', 'cash', 'points', 'card', 'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('DATE(regidate) = \''.$today.'\'');
 				$this->db->where('order_num IS NOT NULL');
 				$this->db->orderby('regidate', 'asc');
 				$data = $this->db->get('order')->result_array(false);
-				
+				/*$sql = "SELECT count(order_num) as count, sum(amount), sum(price), sum(tax), sum(cash), sum(points), sum(card), regidate ";
+				$sql .= "FROM `order`";
+				$sql .= "WHERE DATE(regidate) = '".$today."' ";
+				$sql .= "AND store_id = '".$storeId."' ";
+				$sql .= "AND order_num IS NOT NULL ";
+				$sql .= "GROUP BY hour(regidate), minute(regidate), day(regidate) ";
+				$sql .= "order by regidate ASC";
+				$data = $this->db->query($sql)->result_array(false);*/
+				//echo $sql;
+				//echo $this->db->last_query();
+				//echo kohana::Debug($data);
+
 				/* API listUserToday */
+				$this->db->select('user_id' ,'regidate');
 				$this->db->where('store_id', $storeId);
 				$this->db->where('DATE(regidate) = \''.$today.'\'');
 				$this->db->orderby('regidate', 'asc');
@@ -234,8 +252,9 @@ class Home_Controller extends Template_Controller {
 			$totalSales   = $totalCash + $totalCard + $totalPoint;
 			$transations  = count($data);
 			foreach ($data as $key => $value) {
-				$regidate = date($dataFormat, strtotime($this->convert_from_another_time($value['regidate'])));
-
+				//$regidate = date($dataFormat, strtotime($this->convert_from_another_time($value['regidate'])));
+				$regidate = date($dataFormat, strtotime($value['regidate']));
+				
 				$dataSales[$regidate]       = (isset($dataSales[$regidate])?$dataSales[$regidate]:0) + ((float)$value['price'] + (float)$value['tax']);
 				$dataTransations[$regidate] = (isset($dataTransations[$regidate])?$dataTransations[$regidate]:0) + 1;
 			}
@@ -251,7 +270,8 @@ class Home_Controller extends Template_Controller {
 
 		if(!empty($dataUser)){
 			foreach ($dataUser as $key => $value) {
-				$regidate                = date($dataFormat, strtotime($this->convert_from_another_time($value['regidate'])));
+				//$regidate = date($dataFormat, strtotime($this->convert_from_another_time($value['regidate'])));
+				$regidate = date($dataFormat, strtotime($value['regidate']));
 				$dataCustomer[$regidate] = (isset($dataCustomer[$regidate])?$dataCustomer[$regidate]:0) + 1;
 			}
 

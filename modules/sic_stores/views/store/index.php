@@ -1,6 +1,6 @@
 <div class="row">
 	<div class="col-md-12">
-		<div class="portlet solid grey-cararra bordered">
+		<div class="portlet solid grey-cararra bordered wap-store">
 			<div class="portlet-title">
 				<div class="caption">
 					Store Management
@@ -22,11 +22,8 @@
 								</li>
 								<li class="divider"></li>
 								<li>
-									<a href="javascript:void(0)" class="cus-csv" onclick="csvCustomers(1)"><i class="fa fa-file-excel-o"></i> Export to CSV</a>
+									<a href="javascript:void(0)" class="store-csv"><i class="fa fa-file-excel-o"></i> Export to CSV</a>
 								</li>
-								<!-- <li>
-									<a href="javascript:void(0)" class="cus-html" onclick="htmlCustomers(1)"><i class="fa fa-file-code-o"></i> Export to HTML</a>
-								</li> -->
 							</ul>
 						</div>
 					</div>
@@ -85,6 +82,7 @@
 						</tbody>
 					</table>
 				</div>
+				<p style="padding: 0px 0px 5px 5px;"><b id="lb_sl">0</b> items selected</p>
 			</div>
 		</div>
 	</div>

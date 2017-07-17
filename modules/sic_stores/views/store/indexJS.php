@@ -96,7 +96,7 @@
 	}
 
 	var Store = function() {
-		var tbStore;
+		var tbStore, wapStore;
 		var dialogAdd;
 		var loadStore = function (){
 			var _main_count = '<?php echo $total_store ?>';
@@ -173,8 +173,25 @@
 				var tr   = $(this).closest('tr');
 				var row  = tbStore.getDataTable().row( tr );
 				var trId = row.data().DT_RowId;
-
 				editStore(trId);
+			});
+
+			/* Export */
+			wapStore.on('click', '.store-csv', function(event) {
+				event.preventDefault();
+				var selected = tbStore.getSelectedID();
+	        	if(selected.length > 0){
+	        		$('<form>', {
+					    "id": "exportStore",
+					    "html": '<input type="hidden" id="txt_id_selected" name="txt_id_selected" value="' + selected + '" />',
+					    "action": '<?php echo url::base() ?>store/exportStore',
+					    "method": 'post'
+					}).appendTo(document.body).submit();
+				}else{
+					$.bootstrapGrowl("No record selected.", { 
+			           	type: 'danger' 
+			        });
+				}
 			});
 
 			var timeout;
@@ -188,9 +205,9 @@
 			    },1000);
 			} );
 		}
-			
 		return {
 	        init: function () {
+	        	wapStore = $('.wap-store');
 	            loadStore();
 	        },
 	        get: function(){

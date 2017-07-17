@@ -1398,7 +1398,6 @@ class Catalogs_Controller extends Template_Controller {
 		$sql_order    = " ORDER BY 	category.catalog_name ASC, sub_category.sortorder ASC, sub_category.sub_category_name ASC";
 		$sql_query    = $sql_select.$sql_from.$sql_join.$sql_where.$sql_order;
 		$dataCategory = $this->db->query($sql_query)->result_array(false);
-		
 		if(!empty($dataCategory)){
 			foreach ($dataCategory as $key => $value) {
 				if($value['category_id'] == $this->idMenu || $value['category_id'] == $this->idOptions ){
