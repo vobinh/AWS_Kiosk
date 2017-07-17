@@ -103,6 +103,24 @@
 			    },1000);
 			});
 
+			/* Export */
+			wapCustomers.on('click', '.cus-csv', function(event) {
+				event.preventDefault();
+				var selected = tbCustomers.getSelectedID();
+	        	if(selected.length > 0){
+	        		$('<form>', {
+					    "id": "exportMenu",
+					    "html": '<input type="hidden" id="txt_id_selected" name="txt_id_selected" value="' + selected + '" />',
+					    "action": '<?php echo url::base() ?>customers/exportCus',
+					    "method": 'post'
+					}).appendTo(document.body).submit();
+				}else{
+					$.bootstrapGrowl("No record selected.", { 
+			           	type: 'danger' 
+			        });
+				}
+			});
+
 			wapCustomers.on('click', '.cus-store', function(event) {
 				event.preventDefault();
 				var selected = Customers.get().getSelectedID();

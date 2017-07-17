@@ -55,11 +55,8 @@
 									</li>
 									<li class="divider"></li>
 									<li>
-										<a href="javascript:void(0)" class="cus-csv" onclick="csvCustomers(1)"><i class="fa fa-file-excel-o"></i> Export to CSV</a>
+										<a href="javascript:void(0)" class="cus-csv"><i class="fa fa-file-excel-o"></i> Export to CSV</a>
 									</li>
-									<!-- <li>
-										<a href="javascript:void(0)" class="cus-html" onclick="htmlCustomers(1)"><i class="fa fa-file-code-o"></i> Export to HTML</a>
-									</li> -->
 								</ul>
 							</div>
 						<?php endif ?>

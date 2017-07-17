@@ -142,6 +142,62 @@ class Customers_Controller extends Template_Controller {
 		$this->template->jsKiosk = new View('customers/jsCustomers_organizations');
 	}
 
+	public function exportCus(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+						 ->setTitle("Export Customer")
+						 ->setCategory("Export Customer");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Associated Store')
+		->setCellValue('B1', 'Account ID')
+		->setCellValue('C1', 'Name')
+		->setCellValue('D1', 'Point')
+		->setCellValue('E1', 'Address')
+		->setCellValue('F1', 'Phone')
+		->setCellValue('G1', 'Added Date')
+		->setCellValue('H1', 'Notes');
+
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+
+		$strSql = "SELECT user.u_points,  user.regidate, user.account_id, 
+					CONCAT_WS(' ', account.account_first_name, account.name) AS customer_name, 
+					CONCAT_WS(' ', account.account_address, account.account_address_2, account.account_city) AS address, 
+					CONCAT_WS(' ', account.account_state, account.account_zip) AS location, account.phone, account.account_email, account.payment_notes, 
+					store.store AS store_name ";
+		$strSql .= "FROM user ";
+		$strSql .= "LEFT JOIN account ON account.account_id = user.account_id ";
+		$strSql .= "LEFT JOIN store ON store.store_id = user.store_id ";
+		$strSql .= "WHERE user.user_id IN(".$idSelected.") ";
+		$strSql .= "ORDER BY store.store_id ASC, account_no DESC";
+		$result = $this->db->query($strSql)->result_array(false);
+		if(!empty($result)){
+			$rowCount = 2;
+			$column   = 'A';
+			foreach ($result as $key => $value) {
+				$address = $value['address'].(!empty($value['location'])?', '.$value['location']:'');
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['store_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['account_id']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['customer_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['u_points']);
+				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $address);
+				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $value['phone']);
+				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, date_format(date_create($value['regidate']), "m/d/Y"));
+				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, $value['payment_notes']);
+				$rowCount++;
+			}
+		}
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportCustomer_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
+		die();
+	}
+
 	public function jsCustomer(){
 		$iSearch        = $_POST['search']['value'];
 		$_isSearch      = false;
