@@ -16,7 +16,23 @@
 			$('#slt_store_active', wapStage).change(function(event) {
 				tbStage.setAjaxParam('store_id', $(this).val());
 				stageManagement.reloadData();
+			});
 
+			wapStage.on('click', '.stage-csv', function(event) {
+				event.preventDefault();
+				var selected = tbStage.getSelectedID();
+	        	if(selected.length > 0){
+	        		$('<form>', {
+					    "id": "exportMenu",
+					    "html": '<input type="hidden" id="txt_id_selected" name="txt_id_selected" value="' + selected + '" />',
+					    "action": '<?php echo url::base() ?>catalogs/exportStage',
+					    "method": 'post'
+					}).appendTo(document.body).submit();
+				}else{
+					$.bootstrapGrowl("No record selected.", { 
+			           	type: 'danger' 
+			        });
+				}
 			});
 		};
 

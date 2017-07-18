@@ -62,11 +62,8 @@
 									</li>
 									<li class="divider"></li>
 									<li>
-										<a href="javascript:void(0)" class="cus-csv" ><i class="fa fa-file-excel-o"></i> Export to CSV</a>
+										<a href="javascript:void(0)" class="stage-csv" ><i class="fa fa-file-excel-o"></i> Export to CSV</a>
 									</li>
-									<!-- <li>
-										<a href="javascript:void(0)" class="cus-html" ><i class="fa fa-file-code-o"></i> Export to HTML</a>
-									</li> -->
 								</ul>
 							</div>
 						</div>
@@ -83,7 +80,7 @@
 			</div>
 			<div class="clearfix"></div>
 			<div class="portlet-body" style="background-color: #ffffff;">
-				<div class="table-responsive table-datatable filter-hidden" style="height: 406px;position: relative;">
+				<div class="table-responsive table-datatable filter-hidden" style="height: 420px;position: relative;">
 					<table class="table table-striped table-hover table-advance-th" id="tb-stage" width="100%" style="margin: auto auto auto 0;">
 						<thead>
 							<tr>
@@ -113,6 +110,7 @@
 						<tbody>
 						</tbody>
 					</table>
+					<p style="padding: 0px 0px 5px 5px;"><b id="lb_sl">0</b> items selected</p>
 				</div>
 			</div>
 		</div>

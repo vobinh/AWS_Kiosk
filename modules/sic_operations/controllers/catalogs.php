@@ -86,6 +86,57 @@ class Catalogs_Controller extends Template_Controller {
 		die();
 	}
 
+	public function exportStage(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+						 ->setTitle("Export Pick Up Stations")
+						 ->setCategory("Export Pick Up Stations");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Store')
+		->setCellValue('B1', 'Pick Up Stations')
+		->setCellValue('C1', 'Added Date')
+		->setCellValue('D1', 'Update Date')
+		->setCellValue('E1', 'Status');
+
+		$idStore = base64_decode($this->sess_cus['storeId']);
+		if((string)$idStore == '0'){
+			$idStore = $this->_getStoreUsing();
+			
+		}
+		
+		$store_id   = base64_decode($this->sess_cus['storeId']);
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+
+		$this->db->select('stage.name, stage.created_date, stage.updated_date, stage.status, store.store');
+		$this->db->in('stage.id', $idSelected);
+		$this->db->join('store', array('store.store_id' => 'stage.store_id'),'','left');
+		$this->db->orderby('store.store_id', 'asc');
+		$this->db->orderby('stage.name', 'asc');
+		$result = $this->stage_model->getStore($idStore)->result_array(false);
+		if(!empty($result)){
+			$rowCount = 2;
+			$column   = 'A';
+			foreach ($result as $key => $value) {
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['store']);
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, date_format(date_create($value['created_date']), 'm/d/Y'));
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, date_format(date_create($value['updated_date']), 'm/d/Y'));
+				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $value['status']);
+				$rowCount++;
+			}
+		}
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportPickUpStations_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
+		die();
+	}
+
 	public function getDataStage(){
 		$idStore        = base64_decode($this->sess_cus['storeId']);
 		$_data          = array();
@@ -111,7 +162,6 @@ class Catalogs_Controller extends Template_Controller {
 			$this->_setStoreUsing($idStore);
 		}
 
-		$this->db->where('store.status', 1);
 		$this->db->join('store', array('store.store_id' => 'stage.store_id'),'','left');
 		$total_items    = $this->stage_model->getStore($idStore)->count();
 		$total_filter   = $total_items;
@@ -144,7 +194,6 @@ class Catalogs_Controller extends Template_Controller {
 			}
 
 			$this->db->select('stage.*, store.s_first,store.s_last, store.store');
-			$this->db->where('store.status', 1);
 			$this->db->join('store', array('store.store_id' => 'stage.store_id'),'','left');
 			$this->db->orderby('store.store_id', 'asc');
 			$this->db->orderby('stage.name', 'asc');
