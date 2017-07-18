@@ -1374,6 +1374,53 @@ class Catalogs_Controller extends Template_Controller {
 		}
 	}
 
+	public function exportCategory(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+						 ->setTitle("Export Category")
+						 ->setCategory("Export Category");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Category')
+		->setCellValue('B1', 'Item Name')
+		->setCellValue('C1', 'Added Date')
+		->setCellValue('D1', 'Stock');
+
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+
+		$strSql   = "SELECT sub_category.sub_category_name, sub_category.regidate, category.catalog_name, 
+		CASE sub_category.category_id 
+		WHEN '".$this->idMenu."' THEN (SELECT count(menu.menu_id) FROM menu WHERE menu.store_id = sub_category.store_id AND menu.sub_category_id = sub_category.sub_category_id) 
+		WHEN '".$this->idOptions."' THEN (SELECT count(menu.menu_id) FROM menu WHERE menu.store_id = sub_category.store_id AND menu.sub_category_id = sub_category.sub_category_id) 
+		ELSE (SELECT count(inventory.inventory_id) FROM inventory WHERE inventory.admin_id = '".$this->sess_cus['admin_refer_id']."' AND inventory.sub_category_id = sub_category.sub_category_id) END AS total ";
+		$strSql .= "FROM sub_category ";
+		$strSql .= "LEFT JOIN category ON category.category_id = sub_category.category_id ";
+		$strSql .= "WHERE sub_category.sub_category_id IN(".$idSelected.") AND sub_category.admin_id = '".$this->sess_cus['admin_refer_id']."' ";
+		$strSql .= "ORDER BY category.catalog_name ASC, sub_category.sortorder ASC, sub_category.sub_category_name ASC";
+		
+		$result = $this->db->query($strSql)->result_array(false);
+		if(!empty($result)){
+			$rowCount = 2;
+			$column   = 'A';
+			foreach ($result as $key => $value) {
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['catalog_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['sub_category_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, date_format(date_create($value['regidate']), 'm/d/Y'));
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['total'].' Items');
+				$rowCount++;
+			}
+		}
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportCategory_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
+		die();
+	}
+
 	public function getDataCategory(){
 		$admin_refer_id        = $this->sess_cus['admin_refer_id'];
 		$data                  = array();

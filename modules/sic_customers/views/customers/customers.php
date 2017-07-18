@@ -110,6 +110,7 @@
 						</tbody>
 					</table>
 				</div>
+				<p style="padding: 0px 0px 5px 5px;"><b id="lb_sl">0</b> items selected</p>
 			</div>
 		</div>
 	</div>
