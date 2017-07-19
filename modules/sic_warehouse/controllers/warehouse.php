@@ -80,6 +80,98 @@ class Warehouse_Controller extends Template_Controller {
 		return $result->count();
 	}
 
+	public function substrId($id){
+		return substr($id, 0, strlen($id) - 4);
+	}
+
+	public function exportDistribution(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+						 ->setTitle("Export Warehouse Distribution")
+						 ->setCategory("Export Warehouse Distribution");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Category')
+		->setCellValue('B1', 'Item Name')
+		->setCellValue('C1', 'SKU#')
+		->setCellValue('D1', 'Ordered By')
+		->setCellValue('E1', 'Preset Cost of Purchase for Stores')
+		->setCellValue('F1', 'Actual Payment Committed by Store')
+		->setCellValue('G1', 'Quantity')
+		->setCellValue('H1', 'Total Payment')
+		->setCellValue('I1', 'Status');
+
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = arr::map_recursive(array($this, 'substrId'), $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+		$strSql = "SELECT sub_category.sub_category_name, product.pro_id, product.pro_name, 
+			product.pro_no, product.pro_cost_store,product.pro_per_store,product.pro_unit,store_order.store_price,
+			store_order.store_order_id,store_order.mark_complete,store_order.date_mark_complete,
+			store_order.store_unit,store_order.store_regidate,store_order.store_order_from,
+			store.store ";
+		$strSql .= "FROM store_order ";
+		$strSql .= "LEFT JOIN product ON product.pro_id = store_order.product_id ";
+		$strSql .= "LEFT JOIN sub_category ON sub_category.sub_category_id = product.sub_category_id ";
+		$strSql .= "LEFT JOIN store ON store.store_id = store_order.store_id ";
+		$strSql .= "WHERE store_order.admin_id = '".$this->sess_cus['admin_refer_id']."' ";
+		$strSql .= "AND store_order.store_order_id IN(".$idSelected.") ";
+		$strSql .= "ORDER BY sub_category.sub_category_name ASC";
+		$result = $this->db->query($strSql)->result_array(false);
+		if(!empty($result)){
+			$rowCount = 2;
+			$column   = 'A';
+			$arrStatus = array('Approved','Approved','Waiting For a Reply','Rejected');
+			foreach ($result as $key => $value) {
+				$_str  = '';
+
+				$pro_per_store  = !empty($value['pro_per_store'])?(float)$value['pro_per_store']:0;
+				$store_price    = !empty($value['store_price'])?(float)$value['store_price']:0;
+				$pro_cost_store = !empty($value['pro_cost_store'])?(float)$value['pro_cost_store']:0;
+				
+				$tdCostStores   = (!empty($value['pro_cost_store'])?'$'.number_format($value['pro_cost_store'],2,'.','').' per':'').(!empty($value['pro_per_store'])?' '.$value['pro_per_store'].' '.$value['pro_unit']:'');
+				$valOrder       = (float)$value['store_unit'];
+
+				if($value['mark_complete'] != 1 && $value['mark_complete'] != 0){
+					/* API totalAvailable */
+					$this->db->select('pro_id, SUM(quantity) as total');
+					$this->db->where('admin_id', $this->sess_cus['admin_refer_id']);
+					$this->db->in('pro_id', array($value['pro_id']));
+					$this->db->where('(expire_day >= "'.date('Y-m-d 00:00:00').'" OR expire_day = "1000-01-01 00:00:00")');
+					$this->db->groupby('pro_id');
+					$result = $this->db->get('warehouse')->result_array(false);
+
+					$valWarehosue = !empty($result['0']['total'])?(float)$result['0']['total']:0;
+					if($valOrder > $valWarehosue){
+						$_str  = chr(13).'Insufficient stock '.abs($valWarehosue-$valOrder).' '.$value['pro_unit'].' required';
+					}
+				}
+
+				$tdCostWarehouse = (float)number_format(($pro_per_store * $store_price) / $valOrder, 2,'.','');
+				$tdCostWarehouse = '$'.number_format($tdCostWarehouse,2,'.','').' per'.(!empty($value['pro_per_store'])?' '.$value['pro_per_store'].' '.$value['pro_unit']:'');
+				$quantity = $value['store_unit'].' '.$value['pro_unit'];
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['sub_category_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['pro_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['store']);
+				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $tdCostStores);
+				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $tdCostWarehouse);
+				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, $quantity.$_str);
+				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, '$'.number_format($value['store_price'],2,'.',''));
+				$objPHPExcel->getActiveSheet()->setCellValue("I".$rowCount, $arrStatus[$value['mark_complete']]);
+				$rowCount++;
+			}
+		}
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportWarehouseDistribution_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
+		die();
+		die();
+	}
+
 	public function getDataDistribution(){
 		$iSearch        = $_POST['search']['value'];
 		$_isSearch      = false;
@@ -171,7 +263,6 @@ class Warehouse_Controller extends Template_Controller {
 		}else{
 			$this->db->where('(store_order.store_status <> 2)');
 		}
-		
 
 		$this->db->join('product', array('product.pro_id' => 'store_order.product_id'),'','');
 		$this->db->join('store', array('store.store_id' => 'store_order.store_id'),'','');
@@ -255,7 +346,7 @@ class Warehouse_Controller extends Template_Controller {
 		$records["recordsTotal"]    = $total_items;
 		$records["recordsFiltered"] = $total_filter;
 		
-		$this->_getContOrder();
+		$this->_getCountOrder();
 		$records['totalOrder']      = $this->countOrder;
 		$records['countDelete']     = $countDelete;
 		echo json_encode($records);
@@ -463,6 +554,113 @@ class Warehouse_Controller extends Template_Controller {
 		$this->db->where('admin_id', $this->sess_cus['admin_refer_id']);
 		$result = $this->db->delete('warehouse');
 		return $result->count();
+	}
+
+	public function exportInventory(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+						 ->setTitle("Export Warehouse Inventory")
+						 ->setCategory("Export Warehouse Inventory");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Item Name')
+		->setCellValue('B1', 'Category')
+		->setCellValue('C1', 'SKU#')
+		->setCellValue('D1', 'Lot#')
+		->setCellValue('E1', 'Added Date')
+		->setCellValue('F1', 'Expiry Date')
+		->setCellValue('G1', 'Status')
+		->setCellValue('H1', 'Stock');
+
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+
+		$this->db->select('warehouse.warehouse_id, warehouse.sub_category_id, warehouse.item, warehouse.quantity, warehouse.pro_id, warehouse.admin_id, warehouse.price, warehouse.expire_day, warehouse.status, warehouse.file_id, warehouse.regidate, warehouse.lot,
+				sub_category.sub_category_name, sub_category.category_id, 
+				product.pro_no, product.pro_unit');
+		$this->db->where('warehouse.admin_id', $this->sess_cus['admin_refer_id']);
+		$this->db->in('warehouse.warehouse_id', $idSelected);
+		$this->db->join('product', array('product.pro_id' => 'warehouse.pro_id'),'','');
+		$this->db->join('sub_category', array('sub_category.sub_category_id' => 'warehouse.sub_category_id'),'','left');
+		$this->db->orderby('warehouse.expire_day', 'asc');
+		$result = $this->db->get('warehouse')->result_array(false);
+		
+		$status = array('Expired', 'Not available', 'Expires soon', 'Low Inventory', 'Available');
+		if(!empty($result)){
+			$rowCount = 2;
+			$column = 'A';
+			foreach ($result as $key => $value) {
+				$quantity      = !empty($value['quantity'])?$value['quantity']:0;
+				$expireDay     = $value['expire_day'];
+				$arrExprireDay = explode(',', $expireDay);
+				$addDay        = $value['regidate'];
+				$arrAddDay     = explode(',', $addDay);
+				if(!empty($arrExprireDay)){
+					$intStatus = 0;
+					$dataExp   = $arrExprireDay[0];
+					$dataAdd   = $arrAddDay[0];
+					foreach ($arrExprireDay as $sl => $ExprireDay) {
+						$flag = false;
+						if(!empty($ExprireDay) && (int)strtotime($ExprireDay) > 0){
+							$date       = date_format(date_create($ExprireDay), 'm/d/Y');
+							$intDate    = strtotime($date);
+							$today      = strtotime(date('m/d/Y'));
+
+							$days = (int)($intDate - $today) / (60 * 60 * 24);
+							if($days < 0){
+								$flag = ($intStatus < 0)?true:false;
+								$intStatus = ($intStatus < 0)?0:$intStatus;//Expired
+								goto setDay;
+							}
+						}
+						if($quantity <= 0){
+							$flag = ($intStatus < 1)?true:false;
+							$intStatus = ($intStatus < 1)?1:$intStatus; //Not available
+						}elseif($quantity <= 5){
+							$flag = ($intStatus < 3)?true:false;
+							$intStatus = ($intStatus < 3)?3:$intStatus; //Low Inventory
+						}elseif(isset($days) && $days <= 5){
+							$flag = ($intStatus < 2)?true:false;
+							$intStatus = ($intStatus < 2)?2:$intStatus;//Expires soon
+						}else{
+							$flag = ($intStatus < 4)?true:false;
+							$intStatus = ($intStatus < 4)?4:$intStatus;//Available
+						}
+						goto setDay;
+						setDay: 
+						if($flag){
+							$dataExp = $ExprireDay;
+							$dataAdd = $arrAddDay[$sl];
+						}
+					}
+					if(!empty($dataExp) && (int)strtotime($dataExp) > 0){
+						$dataExp    = date_format(date_create($dataExp), 'm/d/Y');
+					}else{
+						$dataExp    = 'No expiry set';
+					}
+					$dataAdd    = date_format(date_create($dataAdd), 'm/d/Y');
+				}
+
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['item']);
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['sub_category_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['lot']);
+				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $dataAdd);
+				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $dataExp);
+				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, $status[$intStatus]);
+				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, $value['quantity'].' '.$value['pro_unit']);
+				$rowCount++;
+			}
+		}
+
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportWarehouseInventory_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
+		die();
 	}
 
 	public function getDataInventory(){
@@ -754,8 +952,8 @@ class Warehouse_Controller extends Template_Controller {
 		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
 		$objPHPExcel = new PHPExcel();
 		$objPHPExcel->getProperties()
-						 ->setTitle("Export Menu")
-						 ->setCategory("Export Menu");
+						 ->setTitle("Export Warehouse Order")
+						 ->setCategory("Export Warehouse Order");
 		$objPHPExcel->setActiveSheetIndex(0)
 		->setCellValue('A1', 'Category')
 		->setCellValue('B1', 'Item Name')
@@ -1163,6 +1361,63 @@ class Warehouse_Controller extends Template_Controller {
 		die();
 	}
 
+	public function exportRegistry(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+						 ->setTitle("Export Warehouse Registry")
+						 ->setCategory("Export Warehouse Registry");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Category')
+		->setCellValue('B1', 'Item Name')
+		->setCellValue('C1', 'SKU#')
+		->setCellValue('D1', 'Cost of Purchase Store')
+		->setCellValue('E1', 'Cost of Purchase Warehouse')
+		->setCellValue('F1', 'Unit')
+		->setCellValue('G1', 'Shelf Life Store')
+		->setCellValue('H1', 'Shelf Life Warehouse');
+
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+
+		$this->db->select('product.pro_name, product.pro_no, product.pro_unit, product.pro_cost_store, 
+			product.pro_cost_warehouse, product.pro_per_store, product.pro_per_warehouse,
+			product.pro_shelf_life_store, product.pro_shelf_life_warehouse,
+			sub_category.sub_category_name');
+		$this->db->where('product.admin_id', $this->sess_cus['admin_refer_id']);
+		$this->db->where('product.pro_status','1');
+		$this->db->in('product.pro_id', $idSelected);
+		$this->db->join('sub_category', array('sub_category.sub_category_id' => 'product.sub_category_id'),'','left');
+		$this->db->orderby('sub_category.sub_category_name', 'ASC');
+		$result = $this->db->get('product')->result_array(false);
+		if(!empty($result)){
+			$rowCount = 2;
+			$column = 'A';
+			foreach ($result as $key => $value) {
+				$tdCostStores    = (!empty($value['pro_cost_store'])?'$'.$value['pro_cost_store'].' per':'').(!empty($value['pro_per_store'])?' '.$value['pro_per_store'].' '.$value['pro_unit']:'');
+				$tdCostWarehouse = (!empty($value['pro_cost_warehouse'])?'$'.$value['pro_cost_warehouse'].' per':'').(!empty($value['pro_per_warehouse'])?' '.$value['pro_per_warehouse'].' '.$value['pro_unit']:'');
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['sub_category_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['pro_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $tdCostStores);
+				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $tdCostWarehouse);
+				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $value['pro_unit']);
+				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, !empty($value['pro_shelf_life_store'])?$value['pro_shelf_life_store'].' days':'');
+				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, !empty($value['pro_shelf_life_warehouse'])?$value['pro_shelf_life_warehouse'].' days':'');
+				$rowCount++;
+			}
+		}
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportWarehouseRegistry_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
+		die();
+		die();
+	}
+
 	public function getDataRegistry(){
 		$iSearch        = $_POST['search']['value'];
 		$_isSearch      = false;
@@ -1207,8 +1462,6 @@ class Warehouse_Controller extends Template_Controller {
 		$this->db->orderby('sub_category.sub_category_name', 'ASC');
 		$this->db->limit($iDisplayLength,$iDisplayStart);
 		$result = $this->db->get('product')->result_array(false);
-
-		// echo kohana::Debug($result);
 		if(!empty($result)){
 			foreach ($result as $key => $value) {
 				$tdCostStores = (!empty($value['pro_cost_store'])?'$'.$value['pro_cost_store'].' per':'').(!empty($value['pro_per_store'])?' '.$value['pro_per_store'].' '.$value['pro_unit']:'');
@@ -1336,6 +1589,50 @@ class Warehouse_Controller extends Template_Controller {
 			'title'        => $title,
 		));
 		$template->render(true);
+		die();
+	}
+
+	public function exportCategory(){
+		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
+		$objPHPExcel = new PHPExcel();
+		$objPHPExcel->getProperties()
+						 ->setTitle("Export Warehouse Category")
+						 ->setCategory("Export Warehouse Category");
+		$objPHPExcel->setActiveSheetIndex(0)
+		->setCellValue('A1', 'Category')
+		->setCellValue('B1', 'Item Name')
+		->setCellValue('C1', 'Added Date')
+		->setCellValue('D1', 'Stock');
+
+		$idSelected = $this->input->post('txt_id_selected');
+		$idSelected = explode(',', $idSelected);
+		$idSelected = implode('","', $idSelected);
+		$idSelected = '"'.$idSelected.'"';
+
+		$strSql   = "SELECT sub_category.sub_category_name, sub_category.regidate, category.catalog_name, 
+		(SELECT count(warehouse.warehouse_id) FROM warehouse WHERE warehouse.admin_id = '".$this->sess_cus['admin_refer_id']."' AND warehouse.sub_category_id = sub_category.sub_category_id) AS total ";
+		$strSql .= "FROM sub_category ";
+		$strSql .= "LEFT JOIN category ON category.category_id = sub_category.category_id ";
+		$strSql .= "WHERE sub_category.sub_category_id IN(".$idSelected.") AND sub_category.admin_id = '".$this->sess_cus['admin_refer_id']."' ";
+		$strSql .= "ORDER BY category.catalog_name ASC, sub_category.sortorder ASC, sub_category.sub_category_name ASC";
+		
+		$result = $this->db->query($strSql)->result_array(false);
+		if(!empty($result)){
+			$rowCount = 2;
+			$column   = 'A';
+			foreach ($result as $key => $value) {
+				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['catalog_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['sub_category_name']);
+				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, date_format(date_create($value['regidate']), 'm/d/Y'));
+				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['total'].' Items');
+				$rowCount++;
+			}
+		}
+		header('Content-Type: application/vnd.ms-excel'); 
+		header('Content-Disposition: attachment;filename="ExportWarehouseCategory_'.date("mdYhs").'.xls"'); 
+		header('Cache-Control: max-age=0'); 
+		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
+		$objWriter->save('php://output');
 		die();
 	}
 

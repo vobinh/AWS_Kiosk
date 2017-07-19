@@ -3,10 +3,109 @@
 		var wapDistribution;
 		var tbDistribution;
 		var dialogAdd;
-		var loadDistribution = function (){
-			
-			tbDistribution = new Datatable();
+		var handleEvent = function(){
+			wapDistribution.on('click', '.btn-add-distribution', function(event) {
+				event.preventDefault();
+				frmAddItemDistribution();
+			});
 
+			tbDistribution.getTable().on('click', '.btn-approve', function(e) {
+				e.preventDefault();
+				var tr   = $(this).closest('tr');
+				var row  = tbDistribution.getDataTable().row( tr );
+				var trId = row.data().DT_RowId;
+				distributionWarehouse.approve(trId);
+			});
+
+			tbDistribution.getTable().on('click', '.btn-reject', function(e) {
+				e.preventDefault();
+				var tr   = $(this).closest('tr');
+				var row  = tbDistribution.getDataTable().row( tr );
+				var trId = row.data().DT_RowId;
+				distributionWarehouse.reject(trId);
+			});
+
+			tbDistribution.getTable().on('click', '.btn-delete', function(e) {
+				e.preventDefault();
+				var tr   = $(this).closest('tr');
+				var row  = tbDistribution.getDataTable().row( tr );
+				var trId = row.data().DT_RowId;
+				distributionWarehouse.deleteItem(trId);
+			});
+
+			wapDistribution.on('click', '.btn-filter', function(e) {
+				e.preventDefault();
+				var val = $(this).attr('data-name');
+				$('.btn-filter', wapDistribution).removeClass('green').addClass('default').prop('disabled', false);
+				$(this).addClass('green').prop('disabled', true);
+				
+				var datatable    = tbDistribution.getDataTable();
+				var tablewrapper = tbDistribution.getTableWrapper();
+				var table        = tbDistribution.getTable();
+
+				tbDistribution.clearSelectedID();
+				$('.chk-all', tablewrapper).prop('checked',false);
+				Kiosk.updateUniform('.chk-all', tablewrapper);
+				tbDistribution.setAjaxParam("show-filter", val);
+				datatable.ajax.reload();
+			});
+
+			wapDistribution.on('change', '.chk_auto_delete', function(event) {
+				event.preventDefault();
+				if($(this).is(':checked')){
+					var datatable    = tbDistribution.getDataTable();
+					var tablewrapper = tbDistribution.getTableWrapper();
+					var table        = tbDistribution.getTable();
+
+					tbDistribution.clearSelectedID();
+					$('.chk-all', tablewrapper).prop('checked',false);
+					Kiosk.updateUniform('.chk-all', tablewrapper);
+					tbDistribution.setAjaxParam("auto-delete", 1);
+					datatable.ajax.reload();
+				}else{
+					var datatable    = tbDistribution.getDataTable();
+					var tablewrapper = tbDistribution.getTableWrapper();
+					var table        = tbDistribution.getTable();
+
+					tbDistribution.clearSelectedID();
+					$('.chk-all', tablewrapper).prop('checked',false);
+					Kiosk.updateUniform('.chk-all', tablewrapper);
+					tbDistribution.setAjaxParam("auto-delete", 0);
+					datatable.ajax.reload();
+				}
+			});
+			var timeout;
+			$('#myInput').on( 'keyup', function () {
+				var datatable   = tbDistribution.getDataTable();
+				Kiosk.blockTableUI('.table-datatable');
+				var _textSearch = this.value;
+				window.clearTimeout(timeout);
+			    timeout = window.setTimeout(function(){
+			       datatable.search(_textSearch).draw();
+			    },1000);
+			});
+
+			/* EXPORT */
+			wapDistribution.on('click', '.distribution-csv', function(event) {
+				event.preventDefault();
+				var selected = tbDistribution.getSelectedID();
+	        	if(selected.length > 0){
+	        		$('<form>', {
+					    "id": "exportMenu",
+					    "html": '<input type="hidden" id="txt_id_selected" name="txt_id_selected" value="' + selected + '" />',
+					    "action": '<?php echo url::base() ?>warehouse/exportDistribution',
+					    "method": 'post'
+					}).appendTo(document.body).submit();
+				}else{
+					$.bootstrapGrowl("No record selected.", { 
+			           	type: 'danger' 
+			        });
+				}
+			});
+		};
+
+		var loadDistribution = function (){
+			tbDistribution = new Datatable();
 			tbDistribution.init({
 				src: $("#tb-distribution"),
 				dataTable: {
@@ -107,102 +206,14 @@
 			        }
 				}
 			});
-			
-			wapDistribution.on('click', '.btn-add-distribution', function(event) {
-				event.preventDefault();
-				frmAddItemDistribution();
-			});
-
-			tbDistribution.getTable().on('click', '.btn-approve', function(e) {
-				e.preventDefault();
-
-				var tr   = $(this).closest('tr');
-				var row  = tbDistribution.getDataTable().row( tr );
-				var trId = row.data().DT_RowId;
-
-				distributionWarehouse.approve(trId);
-			});
-
-			tbDistribution.getTable().on('click', '.btn-reject', function(e) {
-				e.preventDefault();
-
-				var tr   = $(this).closest('tr');
-				var row  = tbDistribution.getDataTable().row( tr );
-				var trId = row.data().DT_RowId;
-
-				distributionWarehouse.reject(trId);
-				//addCatalog();deleteItem
-			});
-
-			tbDistribution.getTable().on('click', '.btn-delete', function(e) {
-				e.preventDefault();
-				var tr   = $(this).closest('tr');
-				var row  = tbDistribution.getDataTable().row( tr );
-				var trId = row.data().DT_RowId;
-				distributionWarehouse.deleteItem(trId);
-			});
-
-			wapDistribution.on('click', '.btn-filter', function(e) {
-				e.preventDefault();
-				var val = $(this).attr('data-name');
-				$('.btn-filter', wapDistribution).removeClass('green').addClass('default').prop('disabled', false);
-				$(this).addClass('green').prop('disabled', true);
-				
-				var datatable    = tbDistribution.getDataTable();
-				var tablewrapper = tbDistribution.getTableWrapper();
-				var table        = tbDistribution.getTable();
-
-				tbDistribution.clearSelectedID();
-				$('.chk-all', tablewrapper).prop('checked',false);
-				Kiosk.updateUniform('.chk-all', tablewrapper);
-				tbDistribution.setAjaxParam("show-filter", val);
-				datatable.ajax.reload();
-				//tbDistribution.clearAjaxParams();
-			});
-
-			wapDistribution.on('change', '.chk_auto_delete', function(event) {
-				event.preventDefault();
-				if($(this).is(':checked')){
-					var datatable    = tbDistribution.getDataTable();
-					var tablewrapper = tbDistribution.getTableWrapper();
-					var table        = tbDistribution.getTable();
-
-					tbDistribution.clearSelectedID();
-					$('.chk-all', tablewrapper).prop('checked',false);
-					Kiosk.updateUniform('.chk-all', tablewrapper);
-					tbDistribution.setAjaxParam("auto-delete", 1);
-					datatable.ajax.reload();
-				}else{
-					var datatable    = tbDistribution.getDataTable();
-					var tablewrapper = tbDistribution.getTableWrapper();
-					var table        = tbDistribution.getTable();
-
-					tbDistribution.clearSelectedID();
-					$('.chk-all', tablewrapper).prop('checked',false);
-					Kiosk.updateUniform('.chk-all', tablewrapper);
-					tbDistribution.setAjaxParam("auto-delete", 0);
-					datatable.ajax.reload();
-				}
-			});
-			var timeout;
-			$('#myInput').on( 'keyup', function () {
-				var datatable   = tbDistribution.getDataTable();
-				Kiosk.blockTableUI('.table-datatable');
-				var _textSearch = this.value;
-				window.clearTimeout(timeout);
-			    timeout = window.setTimeout(function(){
-			       datatable.search(_textSearch).draw();
-			    },1000);
-			} );
 		}
 		
 		return {
 	        init: function () {
 	        	wapDistribution = $('.wap-list-distribution');
 	        	Kiosk.initUniform($('.chk-all', tbDistribution));
-	        	//tbDistribution.setAjaxParam('show', 'ALL');
 	            loadDistribution();
-	            //tbDistribution.clearAjaxParams();
+	            handleEvent();
 	        },
 	        approve: function(id){
 	        	$.ajax({

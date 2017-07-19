@@ -1,8 +1,26 @@
 <script type="text/javascript">
 	var registryWarehouse = function() {
-		var wapReistry;
-		var tbRegistry;
-		var dialogAdd;
+		var wapReistry,tbRegistry, dialogAdd;
+		var handleEvent = function(){
+			/* EXPORT */
+			wapReistry.on('click', '.registry-csv', function(event) {
+				event.preventDefault();
+				var selected = tbRegistry.getSelectedID();
+	        	if(selected.length > 0){
+	        		$('<form>', {
+					    "id": "exportMenu",
+					    "html": '<input type="hidden" id="txt_id_selected" name="txt_id_selected" value="' + selected + '" />',
+					    "action": '<?php echo url::base() ?>warehouse/exportRegistry',
+					    "method": 'post'
+					}).appendTo(document.body).submit();
+				}else{
+					$.bootstrapGrowl("No record selected.", { 
+			           	type: 'danger' 
+			        });
+				}
+			});
+		};
+
 		var loadRegistry = function (){
 			
 			tbRegistry = new Datatable();
@@ -115,13 +133,14 @@
 			       datatable.search(_textSearch).draw();
 			    },1000);
 			} );
-		}
+		};
 		
 		return {
 	        init: function () {
 	        	wapReistry = $('.wap-list-registry');
 	        	Kiosk.initUniform($('.chk-all', tbRegistry));
 	            loadRegistry();
+	            handleEvent();
 	        },
 	        add: function(){
 	        	Kiosk.blockUI();
@@ -136,7 +155,7 @@
 				})
 				.fail(function() {
 					Kiosk.unblockUI();
-					$.bootstrapGrowl("Could not complete request. Please check your internet connection.", { 
+					$.bootstrapGrowl("Could not complete request.", { 
 			        	type: 'danger' 
 			        });
 				});
@@ -155,7 +174,7 @@
 				})
 				.fail(function() {
 					Kiosk.unblockUI();
-					$.bootstrapGrowl("Could not complete request. Please check your internet connection.", { 
+					$.bootstrapGrowl("Could not complete request.", { 
 			        	type: 'danger' 
 			        });
 				});
@@ -207,7 +226,7 @@
 								})
 								.fail(function() {
 									Kiosk.unblockTableUI('.table-datatable');
-									$.bootstrapGrowl("Could not complete request. Please check your internet connection.", { 
+									$.bootstrapGrowl("Could not complete request.", { 
 						            	type: 'danger' 
 						            });
 								});
@@ -263,7 +282,7 @@
 							})
 							.fail(function() {
 								Kiosk.unblockTableUI('.table-datatable');
-								$.bootstrapGrowl("Could not complete request. Please check your internet connection.", { 
+								$.bootstrapGrowl("Could not complete request.", { 
 					            	type: 'danger' 
 					            });
 							});

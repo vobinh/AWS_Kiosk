@@ -1,58 +1,11 @@
-<script src="https://deuxhuithuit.github.io/quicksearch/r/src/jquery.quicksearch.js"></script>
+<script src="<?php echo $this->site['base_url'] ?>plugins/global/plugins/quicksearch.js"></script>
 <script type="text/javascript">
     var frmCategory = function(){
     	var frm,
     		wapContent;
 
     	var handleEvent = function(){
-    		wapContent.on('click', '.btn-upload', function(event) {
-    			event.preventDefault();
-    			Kiosk.blockUI();
-				/*var btn    = $(this);
-				var parent   = btn.parents('.frm-img');*/
-				var store_id = '<?php echo base64_decode($this->sess_cus["storeId"]) ?>';
-				var data     = new FormData();
-				data.append('uploadfile', $('#uploadfile').prop('files')[0]);
-				data.append('store_id', store_id);
-				$.ajax({
-				    type: 'POST',
-				    //url: "<?php echo $this->hostUploadImg ?>",
-				    url: "<?php echo url::base() ?>catalogs/sendImg",
-				    data: data,
-				    crossDomain: true,
-				    processData: false,
-				    contentType: false,
-				    dataType : 'json',
-				    success: function(response) {
-				    	if(response.responseMsg == 'Success'){
-				    		$.bootstrapGrowl("Upload Success.", { 
-				            	type: 'success' 
-				            });
-				    		$('#uploadfilehd', wapContent).val(response.data[0]['file_id']);
-				    		$('.btn-upload', wapContent).hide();
-				    	}else{
-				    		$('#uploadfilehd', wapContent).val('');
-				    		$.bootstrapGrowl("Could not complete request.", { 
-				            	type: 'danger' 
-				            });
-				    	}
-				    	Kiosk.unblockUI();
-				    }
-			   	}).fail(function() {
-					Kiosk.unblockUI();
-					$.bootstrapGrowl("Could not complete request.", { 
-		            	type: 'danger' 
-		            });
-				});
-    		});
-    		wapContent.on('click', '.btn-remove', function(event) {
-    			event.preventDefault();
-    			$('#uploadfilehd', wapContent).val('');
-    		});
-
-    		$('#uploadfile').on('change.bs.fileinput', function(event, files) {
-			    $('.btn-upload').removeAttr('style');
-			});
+    		
     	};
 
     	var addItem = function(){
@@ -213,6 +166,82 @@
 		var wapContentCategory;
 		var ajaxParams = {};
 		var qSearch;
+		var handleEvent = function(){
+			wapContentCategory.on('click', '.chk-all', function(e){
+                var c = this.checked;
+                $('.item-select:checkbox:visible', wapContentCategory).prop('checked',c);
+                Kiosk.updateUniform('.item-select', wapContentCategory);
+            });
+
+			wapContentCategory.on('click', '.item-category', function(e) {
+				if(e.target.classList[0] !== 'item-select'){
+					var id = $('.item-select', this).val();
+					editCategory(id);
+				}
+			});
+
+			wapContentCategory.on('click', '.category-delete', function(event) {
+				var selected = $.map($('.item-select:checked', wapContentCategory), function(c){
+					return c.value; 
+				});
+				if(selected.length > 0){
+					bootbox.confirm({
+			            message: "Are you sure you want to delete this record ?",
+			            title: "Delete",
+			            buttons: {
+			              cancel: {
+			                label: "No",
+			                className: "default btn-no"
+			              },confirm: {
+			                label: "Yes",
+			                className: "green btn-yes"
+			              }
+			            },callback: function(result) {
+			            	if(result){
+			            			Kiosk.blockTableUI('.portlet-body', '391px');
+			                      	$.ajax({
+										url: '<?php echo url::base() ?>warehouse/delete/category',
+										type: 'POST',
+										dataType: 'json',
+										data: {'chk_customer': selected},
+									})
+									.done(function(data) {
+										pageCategory.loadData('all');
+										Kiosk.unblockTableUI('.portlet-body');
+
+									})
+									.fail(function() {
+										Kiosk.unblockTableUI('.portlet-body');
+										$.bootstrapGrowl("Could not complete request. Please check your internet connection.", { 
+							            	type: 'danger' 
+							            });
+									});
+			                    }
+			                }
+			        });
+				}
+			});
+			
+			/* Export */
+			wapContentCategory.on('click', '.category-csv', function(event) {
+				event.preventDefault();
+				var selected = $.map($('.item-select:checked', wapContentCategory), function(c){
+					return c.value; 
+				});
+				if(selected.length > 0){
+					$('<form>', {
+					    "id": "exportMenu",
+					    "html": '<input type="hidden" id="txt_id_selected" name="txt_id_selected" value="' + selected + '" />',
+					    "action": '<?php echo url::base() ?>warehouse/exportCategory',
+					    "method": 'post'
+					}).appendTo(document.body).submit();
+				}else{
+					$.bootstrapGrowl("No record selected.", { 
+			           	type: 'danger' 
+			        });
+				}
+			});
+		};
 
 		var loadData = function(){
 			Kiosk.blockUI({
@@ -279,69 +308,11 @@
 		};
 		return{
 			init: function(taget){
-
-    			wapContentCategory = taget;
-    			bodyData = taget.find('.body-data-category');
-
-    			qSearch = $('input#search', wapContentCategory).quicksearch('.wap-item-category');
-
-    			pageCategory.loadData('all');
-
-    			wapContentCategory.on('click', '.chk-all', function(e){
-	                var c = this.checked;
-	                $('.item-select:checkbox:visible', wapContentCategory).prop('checked',c);
-	                Kiosk.updateUniform('.item-select', wapContentCategory);
-	            });
-
-    			wapContentCategory.on('click', '.item-category', function(e) {
-    				if(e.target.classList[0] !== 'item-select'){
-    					var id = $('.item-select', this).val();
-    					editCategory(id);
-    				}
-    			});
-
-    			wapContentCategory.on('click', '.category-delete', function(event) {
-    				var selected = $.map($('.item-select:checked', wapContentCategory), function(c){
-    					return c.value; 
-    				});
-    				if(selected.length > 0){
-						bootbox.confirm({
-				            message: "Are you sure you want to delete this record ?",
-				            title: "Delete",
-				            buttons: {
-				              cancel: {
-				                label: "No",
-				                className: "default btn-no"
-				              },confirm: {
-				                label: "Yes",
-				                className: "green btn-yes"
-				              }
-				            },callback: function(result) {
-				            	if(result){
-				            			Kiosk.blockTableUI('.portlet-body', '391px');
-				                      	$.ajax({
-											url: '<?php echo url::base() ?>warehouse/delete/category',
-											type: 'POST',
-											dataType: 'json',
-											data: {'chk_customer': selected},
-										})
-										.done(function(data) {
-											pageCategory.loadData('all');
-											Kiosk.unblockTableUI('.portlet-body');
-
-										})
-										.fail(function() {
-											Kiosk.unblockTableUI('.portlet-body');
-											$.bootstrapGrowl("Could not complete request. Please check your internet connection.", { 
-								            	type: 'danger' 
-								            });
-										});
-				                    }
-				                }
-				        });
-					}
-    			});
-				
+				wapContentCategory = taget;
+				bodyData           = taget.find('.body-data-category');
+				qSearch            = $('input#search', wapContentCategory).quicksearch('.wap-item-category');
+				pageCategory.loadData('all');
+    			handleEvent();
     		},
     		loadData: function(filter){
     			if(filter){

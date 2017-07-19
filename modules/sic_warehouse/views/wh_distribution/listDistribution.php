@@ -33,9 +33,6 @@
 				</div>
 				<div class="col-sm-8 col-sm-push-4">
 					<div class="table-action">
-						<!-- <button type="button" class="btn green" onclick="registryWarehouse.add()">
-							<i class="fa fa-plus"></i> Register New Item
-						</button> -->
 						<div class="btn-group">
 							<button type="button" class="btn btn-fit-height" data-toggle="dropdown" data-delay="1000" data-close-others="true">
 							Action On Selected <i class="fa fa-angle-down"></i>
@@ -52,11 +49,8 @@
 								</li>
 								<li class="divider"></li>
 								<li>
-									<a href="javascript:void(0)"><i class="fa fa-file-excel-o"></i> Export to CSV</a>
+									<a href="javascript:void(0)" class="distribution-csv"><i class="fa fa-file-excel-o"></i> Export to CSV</a>
 								</li>
-								<!-- <li>
-									<a href="javascript:void(0)"><i class="fa fa-file-code-o"></i> Export to HTML</a>
-								</li> -->
 							</ul>
 						</div>
 					</div>
@@ -120,6 +114,7 @@
 						</tbody>
 					</table>
 				</div>
+				<p style="padding: 0px 0px 0px 5px;margin-bottom: 5px;"><b id="lb_sl">0</b> items selected</p>
 				<div class="row" style="padding-bottom: 10px;">
 					<div class="col-md-12">
 						<input type="checkbox" class="chk_auto_delete" name="chk_auto_delete" value="1"> Automatically delete approved and rejected orders after 10 days

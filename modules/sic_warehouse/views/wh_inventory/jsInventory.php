@@ -367,6 +367,25 @@
     				}
     			});
 
+    			/* EXPORT */
+    			wapInventory.on('click', '.inventory-csv', function(event) {
+    				var selected = $.map($('.item-select:checked', wapInventory), function(c){
+    					return c.value; 
+    				});
+    				if(selected.length > 0){
+						$('<form>', {
+						    "id": "exportMenu",
+						    "html": '<input type="hidden" id="txt_id_selected" name="txt_id_selected" value="' + selected + '" />',
+						    "action": '<?php echo url::base() ?>warehouse/exportInventory',
+						    "method": 'post'
+						}).appendTo(document.body).submit();
+					}else{
+						$.bootstrapGrowl("No record selected.", { 
+				           	type: 'danger' 
+				        });
+					}
+    			});
+
     			wapInventory.on('click', '.inventory-delete', function(event) {
     				var selected = $.map($('.item-select:checked', wapInventory), function(c){
     					return c.value; 

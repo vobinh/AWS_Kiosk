@@ -40,9 +40,6 @@
 								<li>
 									<a href="javascript:void(0)" class="inventory-csv" ><i class="fa fa-file-excel-o"></i>&nbsp;Export to CSV</a>
 								</li>
-								<!-- <li>
-									<a href="javascript:void(0)" class="inventory-html" ><i class="fa fa-file-code-o"></i>&nbsp;Export to HTML</a>
-								</li> -->
 							</ul>
 						</div>
 					</div>
