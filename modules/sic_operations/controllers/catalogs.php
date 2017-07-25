@@ -87,17 +87,16 @@ class Catalogs_Controller extends Template_Controller {
 	}
 
 	public function exportStage(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Pick Up Stations")
-						 ->setCategory("Export Pick Up Stations");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Store')
-		->setCellValue('B1', 'Pick Up Stations')
-		->setCellValue('C1', 'Added Date')
-		->setCellValue('D1', 'Update Date')
-		->setCellValue('E1', 'Status');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportPickUpStations_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w"); 
+		fputcsv($output, array(
+			'Store',
+			'Pick Up Stations',
+			'Added Date',
+			'Update Date',
+			'Status'
+		));
 
 		$idStore = base64_decode($this->sess_cus['storeId']);
 		if((string)$idStore == '0'){
@@ -118,22 +117,17 @@ class Catalogs_Controller extends Template_Controller {
 		$this->db->orderby('stage.name', 'asc');
 		$result = $this->stage_model->getStore($idStore)->result_array(false);
 		if(!empty($result)){
-			$rowCount = 2;
-			$column   = 'A';
 			foreach ($result as $key => $value) {
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['store']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, date_format(date_create($value['created_date']), 'm/d/Y'));
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, date_format(date_create($value['updated_date']), 'm/d/Y'));
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $value['status']);
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['store'];
+				$item[] = $value['name'];
+				$item[] = date_format(date_create($value['created_date']), 'm/d/Y');
+				$item[] = date_format(date_create($value['updated_date']), 'm/d/Y');
+				$item[] = $value['status'];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportPickUpStations_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 
@@ -482,20 +476,19 @@ class Catalogs_Controller extends Template_Controller {
 	}
 
 	public function exportInventory(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Menu")
-						 ->setCategory("Export Menu");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Item Name')
-		->setCellValue('B1', 'Category')
-		->setCellValue('C1', 'SKU#')
-		->setCellValue('D1', 'Lot#')
-		->setCellValue('E1', 'Added Date')
-		->setCellValue('F1', 'Expiry Date')
-		->setCellValue('G1', 'Status')
-		->setCellValue('H1', 'Stock');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportInventory_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array(
+			'Item Name',
+			'Category',
+			'SKU#',
+			'Lot#',
+			'Added Date',
+			'Expiry Date',
+			'Status',
+			'Stock'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -515,8 +508,6 @@ class Catalogs_Controller extends Template_Controller {
 		
 		$status = array('Expired', 'Not available', 'Expires soon', 'Low Inventory', 'Available');
 		if(!empty($result)){
-			$rowCount = 2;
-			$column = 'A';
 			foreach ($result as $key => $value) {
 				$quantity      = !empty($value['i_quatity'])?$value['i_quatity']:0;
 				$expireDay     = $value['expire_day'];
@@ -568,24 +559,19 @@ class Catalogs_Controller extends Template_Controller {
 					}
 					$dataAdd    = date_format(date_create($dataAdd), 'm/d/Y');
 				}
-
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['item']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['lot']);
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $dataAdd);
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $dataExp);
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, $status[$intStatus]);
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, $value['i_quatity'].' '.$value['pro_unit']);
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['item'];
+				$item[] = $value['sub_category_name'];
+				$item[] = $value['pro_no'];
+				$item[] = $value['lot'];
+				$item[] = $dataAdd;
+				$item[] = $dataExp;
+				$item[] = $status[$intStatus];
+				$item[] = $value['i_quatity'].' '.$value['pro_unit'];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportInventory_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 
@@ -900,21 +886,20 @@ class Catalogs_Controller extends Template_Controller {
 	}
 
 	public function exportOrder(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Menu")
-						 ->setCategory("Export Menu");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Category')
-		->setCellValue('B1', 'Item Name')
-		->setCellValue('C1', 'SKU#')
-		->setCellValue('D1', 'Payment')
-		->setCellValue('E1', 'Qty Ordered')
-		->setCellValue('F1', 'Date Ordered')
-		->setCellValue('G1', 'Ordered From')
-		->setCellValue('H1', 'Lot #')
-		->setCellValue('I1', 'Order Status');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportStoreOrder_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array(
+			'Category',
+			'Item Name',
+			'SKU#',
+			'Payment',
+			'Qty Ordered',
+			'Date Ordered',
+			'Ordered From',
+			'Lot #',
+			'Order Status'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -929,28 +914,23 @@ class Catalogs_Controller extends Template_Controller {
 		$this->db->in('store_order.store_order_id', $idSelected);
 		$mlist_product = $this->db->get('store_order')->result_array(false);
 		if(!empty($mlist_product)){
-			$rowCount = 2;
-			$column   = 'A';
 			$arr_ordered_from = array('warehouse' => 'Warehouse', 'independent_purchase' => 'Independent Purchase');
 			$arr_ordered_status = array(0 => 'Complete', 1 => 'Mark as Complete', 2 => 'Waiting For a Reply', 3 => 'Warehouse Reject');
 			foreach ($mlist_product as $key => $value) {
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['pro_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, !empty($value['store_price'])?'$'.number_format($value['store_price'],2):'$'.number_format(0,2));
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $value['store_unit'].' '.$value['pro_unit']);
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, date_format(date_create($value['store_regidate']), "m/d/Y"));
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, !empty($value['store_order_from'])?$arr_ordered_from[$value['store_order_from']]:'');
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, $value['lot']);
-				$objPHPExcel->getActiveSheet()->setCellValue("I".$rowCount, !empty($value['mark_complete'])?$arr_ordered_status[(int)$value['mark_complete']]:$arr_ordered_status[0]);
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['sub_category_name'];
+				$item[] = $value['pro_name'];
+				$item[] = $value['pro_no'];
+				$item[] = !empty($value['store_price'])?'$'.number_format($value['store_price'],2):'$'.number_format(0,2);
+				$item[] = $value['store_unit'].' '.$value['pro_unit'];
+				$item[] = date_format(date_create($value['store_regidate']), "m/d/Y");
+				$item[] = !empty($value['store_order_from'])?$arr_ordered_from[$value['store_order_from']]:'';
+				$item[] = $value['lot'];
+				$item[] = !empty($value['mark_complete'])?$arr_ordered_status[(int)$value['mark_complete']]:$arr_ordered_status[0];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportStoreOrder_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 
@@ -1424,16 +1404,15 @@ class Catalogs_Controller extends Template_Controller {
 	}
 
 	public function exportCategory(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Category")
-						 ->setCategory("Export Category");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Category')
-		->setCellValue('B1', 'Item Name')
-		->setCellValue('C1', 'Added Date')
-		->setCellValue('D1', 'Stock');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportCategory_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array(
+			'Category',
+			'Item Name',
+			'Added Date',
+			'Stock'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -1452,21 +1431,16 @@ class Catalogs_Controller extends Template_Controller {
 		
 		$result = $this->db->query($strSql)->result_array(false);
 		if(!empty($result)){
-			$rowCount = 2;
-			$column   = 'A';
 			foreach ($result as $key => $value) {
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['catalog_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, date_format(date_create($value['regidate']), 'm/d/Y'));
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['total'].' Items');
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['catalog_name'];
+				$item[] = $value['sub_category_name'];
+				$item[] = date_format(date_create($value['regidate']), 'm/d/Y');
+				$item[] = $value['total'].' Items';
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportCategory_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 
@@ -1591,21 +1565,20 @@ class Catalogs_Controller extends Template_Controller {
 	}
 
 	public function exportMenu(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Menu")
-						 ->setCategory("Export Menu");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Category')
-		->setCellValue('B1', 'Item Name')
-		->setCellValue('C1', 'Price')
-		->setCellValue('D1', 'Cost')
-		->setCellValue('E1', 'Available')
-		->setCellValue('F1', 'Menu Item#')
-		->setCellValue('G1', 'Type')
-		->setCellValue('H1', 'Note / Description')
-		->setCellValue('I1', 'Status');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportMenu_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array(
+			'Category',
+			'Item Name',
+			'Price',
+			'Cost',
+			'Available',
+			'Menu Item#',
+			'Type',
+			'Note / Description',
+			'Status'
+		));
 
 		$store_id   = base64_decode($this->sess_cus['storeId']);
 		$idSelected = $this->input->post('txt_id_selected');
@@ -1627,8 +1600,6 @@ class Catalogs_Controller extends Template_Controller {
 		);
 
 		if(!empty($menu)){
-			$rowCount = 2;
-			$column = 'A';
 			foreach ($menu as $key => $value) {
 				$this->db->where('menu_id',$value['menu_id']);
 				$Table_Ingredient = $this->db->get('ingredient')->result_array(false);
@@ -1685,23 +1656,20 @@ class Catalogs_Controller extends Template_Controller {
 				else
 					$type_Menu = 'Combo';
 
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['m_item']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, '$'.number_format($value['price'],2,'.',''));
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, !empty($Table_Ingredient)?('$'.number_format($tdCost,2,'.','')):'');
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $available_unit.' Unit');
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $value['menu_item_number']);
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, $type_Menu);
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, $value['description']);
-				$objPHPExcel->getActiveSheet()->setCellValue("I".$rowCount, !empty($value['menu_status'])?$arrStatus[$value['menu_status']]:$arrStatus[2]);
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['sub_category_name'];
+				$item[] = $value['m_item'];
+				$item[] = '$'.number_format($value['price'],2,'.','');
+				$item[] = !empty($Table_Ingredient)?('$'.number_format($tdCost,2,'.','')):'';
+				$item[] = $available_unit.' Unit';
+				$item[] = $value['menu_item_number'];
+				$item[] = $type_Menu;
+				$item[] = $value['description'];
+				$item[] = !empty($value['menu_status'])?$arrStatus[$value['menu_status']]:$arrStatus[2];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportMenu_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 

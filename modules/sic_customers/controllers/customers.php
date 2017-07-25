@@ -143,20 +143,19 @@ class Customers_Controller extends Template_Controller {
 	}
 
 	public function exportCus(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Customer")
-						 ->setCategory("Export Customer");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Associated Store')
-		->setCellValue('B1', 'Account ID')
-		->setCellValue('C1', 'Name')
-		->setCellValue('D1', 'Point')
-		->setCellValue('E1', 'Address')
-		->setCellValue('F1', 'Phone')
-		->setCellValue('G1', 'Added Date')
-		->setCellValue('H1', 'Notes');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportCustomer_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");  
+		fputcsv($output, array(
+			'Associated Store', 
+			'Account ID', 
+			'Name', 
+			'Point', 
+			'Address', 
+			'Phone', 
+			'Added Date',
+			'Notes'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -175,26 +174,21 @@ class Customers_Controller extends Template_Controller {
 		$strSql .= "ORDER BY store.store_id ASC, account_no DESC";
 		$result = $this->db->query($strSql)->result_array(false);
 		if(!empty($result)){
-			$rowCount = 2;
-			$column   = 'A';
 			foreach ($result as $key => $value) {
 				$address = $value['address'].(!empty($value['location'])?', '.$value['location']:'');
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['store_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['account_id']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['customer_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['u_points']);
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $address);
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $value['phone']);
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, date_format(date_create($value['regidate']), "m/d/Y"));
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, $value['payment_notes']);
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['store_name'];
+				$item[] = $value['account_id'];
+				$item[] = $value['customer_name'];
+				$item[] = $value['u_points'];
+				$item[] = $address;
+				$item[] = $value['phone'];
+				$item[] = date_format(date_create($value['regidate']), "m/d/Y");
+				$item[] = $value['payment_notes'];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportCustomer_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 

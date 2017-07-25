@@ -85,21 +85,20 @@ class Warehouse_Controller extends Template_Controller {
 	}
 
 	public function exportDistribution(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Warehouse Distribution")
-						 ->setCategory("Export Warehouse Distribution");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Category')
-		->setCellValue('B1', 'Item Name')
-		->setCellValue('C1', 'SKU#')
-		->setCellValue('D1', 'Ordered By')
-		->setCellValue('E1', 'Preset Cost of Purchase for Stores')
-		->setCellValue('F1', 'Actual Payment Committed by Store')
-		->setCellValue('G1', 'Quantity')
-		->setCellValue('H1', 'Total Payment')
-		->setCellValue('I1', 'Status');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportWarehouseDistribution_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array(
+			'Category',
+			'Item Name',
+			'SKU#',
+			'Ordered By',
+			'Preset Cost of Purchase for Stores',
+			'Actual Payment Committed by Store',
+			'Quantity',
+			'Total Payment',
+			'Status'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -120,12 +119,9 @@ class Warehouse_Controller extends Template_Controller {
 		$strSql .= "ORDER BY sub_category.sub_category_name ASC";
 		$result = $this->db->query($strSql)->result_array(false);
 		if(!empty($result)){
-			$rowCount = 2;
-			$column   = 'A';
 			$arrStatus = array('Approved','Approved','Waiting For a Reply','Rejected');
 			foreach ($result as $key => $value) {
 				$_str  = '';
-
 				$pro_per_store  = !empty($value['pro_per_store'])?(float)$value['pro_per_store']:0;
 				$store_price    = !empty($value['store_price'])?(float)$value['store_price']:0;
 				$pro_cost_store = !empty($value['pro_cost_store'])?(float)$value['pro_cost_store']:0;
@@ -151,24 +147,21 @@ class Warehouse_Controller extends Template_Controller {
 				$tdCostWarehouse = (float)number_format(($pro_per_store * $store_price) / $valOrder, 2,'.','');
 				$tdCostWarehouse = '$'.number_format($tdCostWarehouse,2,'.','').' per'.(!empty($value['pro_per_store'])?' '.$value['pro_per_store'].' '.$value['pro_unit']:'');
 				$quantity = $value['store_unit'].' '.$value['pro_unit'];
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['pro_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['store']);
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $tdCostStores);
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $tdCostWarehouse);
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, $quantity.$_str);
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, '$'.number_format($value['store_price'],2,'.',''));
-				$objPHPExcel->getActiveSheet()->setCellValue("I".$rowCount, $arrStatus[$value['mark_complete']]);
-				$rowCount++;
+				
+				$item   = array();
+				$item[] = $value['sub_category_name'];
+				$item[] = $value['pro_name'];
+				$item[] = $value['pro_no'];
+				$item[] = $value['store'];
+				$item[] = $tdCostStores;
+				$item[] = $tdCostWarehouse;
+				$item[] = $quantity.$_str;
+				$item[] = '$'.number_format($value['store_price'],2,'.','');
+				$item[] = $arrStatus[$value['mark_complete']];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportWarehouseDistribution_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
-		die();
 		die();
 	}
 
@@ -557,20 +550,18 @@ class Warehouse_Controller extends Template_Controller {
 	}
 
 	public function exportInventory(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Warehouse Inventory")
-						 ->setCategory("Export Warehouse Inventory");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Item Name')
-		->setCellValue('B1', 'Category')
-		->setCellValue('C1', 'SKU#')
-		->setCellValue('D1', 'Lot#')
-		->setCellValue('E1', 'Added Date')
-		->setCellValue('F1', 'Expiry Date')
-		->setCellValue('G1', 'Status')
-		->setCellValue('H1', 'Stock');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportWarehouseInventory_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array('Item Name',
+			'Category',
+			'SKU#',
+			'Lot#',
+			'Added Date',
+			'Expiry Date',
+			'Status',
+			'Stock'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -589,8 +580,6 @@ class Warehouse_Controller extends Template_Controller {
 		
 		$status = array('Expired', 'Not available', 'Expires soon', 'Low Inventory', 'Available');
 		if(!empty($result)){
-			$rowCount = 2;
-			$column = 'A';
 			foreach ($result as $key => $value) {
 				$quantity      = !empty($value['quantity'])?$value['quantity']:0;
 				$expireDay     = $value['expire_day'];
@@ -642,24 +631,19 @@ class Warehouse_Controller extends Template_Controller {
 					}
 					$dataAdd    = date_format(date_create($dataAdd), 'm/d/Y');
 				}
-
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['item']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['lot']);
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $dataAdd);
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $dataExp);
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, $status[$intStatus]);
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, $value['quantity'].' '.$value['pro_unit']);
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['item'];
+				$item[] = $value['sub_category_name'];
+				$item[] = $value['pro_no'];
+				$item[] = $value['lot'];
+				$item[] = $dataAdd;
+				$item[] = $dataExp;
+				$item[] = $status[$intStatus];
+				$item[] = $value['quantity'].' '.$value['pro_unit'];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportWarehouseInventory_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 
@@ -949,20 +933,19 @@ class Warehouse_Controller extends Template_Controller {
 	}
 
 	public function exportOrder(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Warehouse Order")
-						 ->setCategory("Export Warehouse Order");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Category')
-		->setCellValue('B1', 'Item Name')
-		->setCellValue('C1', 'SKU#')
-		->setCellValue('D1', 'Payment')
-		->setCellValue('E1', 'Qty Ordered')
-		->setCellValue('F1', 'Date Ordered')
-		->setCellValue('G1', 'Lot #')
-		->setCellValue('H1', 'Order Status');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportWarehouseOrder_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w"); 
+		fputcsv($output, array(
+			'Category',
+			'Item Name',
+			'SKU#',
+			'Payment',
+			'Qty Ordered',
+			'Date Ordered',
+			'Lot #',
+			'Order Status'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -980,27 +963,22 @@ class Warehouse_Controller extends Template_Controller {
 
 
 		if(!empty($dataOrder)){
-			$rowCount = 2;
-			$column   = 'A';
 			$arr_ordered_from = array('warehouse' => 'Warehouse', 'independent_purchase' => 'Independent Purchase');
 			$arr_ordered_status = array(0 => 'Complete', 1 => 'Mark as Complete', 2 => 'Waiting For a Reply', 3 => 'Warehouse Reject');
 			foreach ($dataOrder as $key => $value) {
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['pro_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, !empty($value['w_price'])?'$'.number_format($value['w_price'],2):'$'.number_format(0,2));
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $value['w_unit'].' '.$value['pro_unit']);
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, date_format(date_create($value['w_regidate']), "m/d/Y"));
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, $value['lot']);
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, !empty($value['mark_complete'])?$arr_ordered_status[(int)$value['mark_complete']]:$arr_ordered_status[0]);
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['sub_category_name'];
+				$item[] = $value['pro_name'];
+				$item[] = $value['pro_no'];
+				$item[] = !empty($value['w_price'])?'$'.number_format($value['w_price'],2):'$'.number_format(0,2);
+				$item[] = $value['w_unit'].' '.$value['pro_unit'];
+				$item[] = date_format(date_create($value['w_regidate']), "m/d/Y");
+				$item[] = $value['lot'];
+				$item[] = !empty($value['mark_complete'])?$arr_ordered_status[(int)$value['mark_complete']]:$arr_ordered_status[0];
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportWarehouseOrder_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 
@@ -1362,20 +1340,18 @@ class Warehouse_Controller extends Template_Controller {
 	}
 
 	public function exportRegistry(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Warehouse Registry")
-						 ->setCategory("Export Warehouse Registry");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Category')
-		->setCellValue('B1', 'Item Name')
-		->setCellValue('C1', 'SKU#')
-		->setCellValue('D1', 'Cost of Purchase Store')
-		->setCellValue('E1', 'Cost of Purchase Warehouse')
-		->setCellValue('F1', 'Unit')
-		->setCellValue('G1', 'Shelf Life Store')
-		->setCellValue('H1', 'Shelf Life Warehouse');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportWarehouseRegistry_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array('Category',
+			'Item Name',
+			'SKU#',
+			'Cost of Purchase Store',
+			'Cost of Purchase Warehouse',
+			'Unit',
+			'Shelf Life Store',
+			'Shelf Life Warehouse'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -1398,23 +1374,20 @@ class Warehouse_Controller extends Template_Controller {
 			foreach ($result as $key => $value) {
 				$tdCostStores    = (!empty($value['pro_cost_store'])?'$'.$value['pro_cost_store'].' per':'').(!empty($value['pro_per_store'])?' '.$value['pro_per_store'].' '.$value['pro_unit']:'');
 				$tdCostWarehouse = (!empty($value['pro_cost_warehouse'])?'$'.$value['pro_cost_warehouse'].' per':'').(!empty($value['pro_per_warehouse'])?' '.$value['pro_per_warehouse'].' '.$value['pro_unit']:'');
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['pro_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $value['pro_no']);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $tdCostStores);
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, $tdCostWarehouse);
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, $value['pro_unit']);
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, !empty($value['pro_shelf_life_store'])?$value['pro_shelf_life_store'].' days':'');
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, !empty($value['pro_shelf_life_warehouse'])?$value['pro_shelf_life_warehouse'].' days':'');
-				$rowCount++;
+				
+				$item   = array();
+				$item[] = $value['sub_category_name'];
+				$item[] = $value['pro_name'];
+				$item[] = $value['pro_no'];
+				$item[] = $tdCostStores;
+				$item[] = $tdCostWarehouse;
+				$item[] = $value['pro_unit'];
+				$item[] = !empty($value['pro_shelf_life_store'])?$value['pro_shelf_life_store'].' days':'';
+				$item[] = !empty($value['pro_shelf_life_warehouse'])?$value['pro_shelf_life_warehouse'].' days':'';
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportWarehouseRegistry_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
-		die();
 		die();
 	}
 
@@ -1593,16 +1566,14 @@ class Warehouse_Controller extends Template_Controller {
 	}
 
 	public function exportCategory(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-						 ->setTitle("Export Warehouse Category")
-						 ->setCategory("Export Warehouse Category");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Category')
-		->setCellValue('B1', 'Item Name')
-		->setCellValue('C1', 'Added Date')
-		->setCellValue('D1', 'Stock');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportWarehouseCategory_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+		fputcsv($output, array('Category',
+			'Item Name',
+			'Added Date',
+			'Stock'
+		));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -1618,21 +1589,15 @@ class Warehouse_Controller extends Template_Controller {
 		
 		$result = $this->db->query($strSql)->result_array(false);
 		if(!empty($result)){
-			$rowCount = 2;
-			$column   = 'A';
 			foreach ($result as $key => $value) {
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, $value['catalog_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['sub_category_name']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, date_format(date_create($value['regidate']), 'm/d/Y'));
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, $value['total'].' Items');
-				$rowCount++;
+				$item   = array();
+				$item[] = $value['catalog_name'];
+				$item[] = $value['sub_category_name'];
+				$item[] = date_format(date_create($value['regidate']), 'm/d/Y');
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportWarehouseCategory_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 

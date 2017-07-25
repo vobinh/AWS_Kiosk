@@ -200,22 +200,21 @@ class Store_Controller extends Template_Controller {
 	}
 
 	public function exportStore(){
-		require Kohana::find_file('vendor/PHPExcleReader','PHPExcel');
-		$objPHPExcel = new PHPExcel();
-		$objPHPExcel->getProperties()
-					->setTitle("Export Store")
-					->setCategory("Export Store");
-		$objPHPExcel->setActiveSheetIndex(0)
-		->setCellValue('A1', 'Store #')
-		->setCellValue('B1', 'Name')
-		->setCellValue('C1', 'Address')
-		->setCellValue('D1', 'Phone')
-		->setCellValue('E1', 'E-mail')
-		->setCellValue('F1', 'Added Date')
-		->setCellValue('G1', 'Notes')
-		->setCellValue('H1', 'Login Credentials')
-		->setCellValue('I1', 'Employees')
-		->setCellValue('J1', 'Status');
+		header('Content-Type: text/csv; charset=utf-8');  
+      	header('Content-Disposition: attachment; filename=ExportStore_'.date("mdYhs").'.csv');
+      	$output = fopen("php://output", "w");
+      	fputcsv($output, array(
+      		'Store #',
+      		'Name',
+      		'Address',
+      		'Phone',
+      		'E-mail',
+      		'Added Date',
+      		'Notes',
+      		'Login Credentials',
+      		'Employees',
+      		'Status'
+      	));
 
 		$idSelected = $this->input->post('txt_id_selected');
 		$idSelected = explode(',', $idSelected);
@@ -237,24 +236,21 @@ class Store_Controller extends Template_Controller {
 				$address = $value['s_address'].' '.$value['s_address_2'].' '.$value['s_city'].', '.$value['s_state'].' '.$value['s_zip'];
 				$address = preg_replace('/\s\s+/', ' ', $address);
 
-				$objPHPExcel->getActiveSheet()->setCellValue("A".$rowCount, !empty($value['s_no'])?$value['s_no']:'');
-				$objPHPExcel->getActiveSheet()->setCellValue("B".$rowCount, $value['store']);
-				$objPHPExcel->getActiveSheet()->setCellValue("C".$rowCount, $address);
-				$objPHPExcel->getActiveSheet()->setCellValue("D".$rowCount, !empty($value['s_phone'])?$value['s_phone']:'');
-				$objPHPExcel->getActiveSheet()->setCellValue("E".$rowCount, !empty($value['s_email'])?$value['s_email']:'');
-				$objPHPExcel->getActiveSheet()->setCellValue("F".$rowCount, !empty($value['regidate'])?date_format(date_create($value['regidate']), "m/d/Y"):'');
-				$objPHPExcel->getActiveSheet()->setCellValue("G".$rowCount, !empty($value['s_notes'])?$value['s_notes']:'');
-				$objPHPExcel->getActiveSheet()->setCellValue("H".$rowCount, !empty($value['total_admin'])?$value['total_admin']:0);
-				$objPHPExcel->getActiveSheet()->setCellValue("I".$rowCount, !empty($value['total_employees'])?$value['total_employees']:0);
-				$objPHPExcel->getActiveSheet()->setCellValue("J".$rowCount, (!empty($value['status']) && $value['status'] == 2)?'Inactive':'Active');
-				$rowCount++;
+				$item   = array();
+				$item[] = !empty($value['s_no'])?$value['s_no']:'';
+				$item[] = $value['store'];
+				$item[] = $address;
+				$item[] = !empty($value['s_phone'])?$value['s_phone']:'';
+				$item[] = !empty($value['s_email'])?$value['s_email']:'';
+				$item[] = !empty($value['regidate'])?date_format(date_create($value['regidate']), "m/d/Y"):'';
+				$item[] = !empty($value['s_notes'])?$value['s_notes']:'';
+				$item[] = !empty($value['total_admin'])?$value['total_admin']:0;
+				$item[] = !empty($value['total_employees'])?$value['total_employees']:0;
+				$item[] = (!empty($value['status']) && $value['status'] == 2)?'Inactive':'Active';
+				fputcsv($output, $item);
 			}
+			fclose($output);
 		}
-		header('Content-Type: application/vnd.ms-excel'); 
-		header('Content-Disposition: attachment;filename="ExportStore_'.date("mdYhs").'.xls"'); 
-		header('Cache-Control: max-age=0'); 
-		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel5'); 
-		$objWriter->save('php://output');
 		die();
 	}
 
