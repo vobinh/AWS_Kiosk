@@ -9,6 +9,8 @@
         background-color: #c9e7cb;
         border-radius: 4px !important;
         text-align: center;
+        min-width: 100px;
+        cursor: pointer;
     }
     .shadow{
         box-shadow: 5px 5px 5px #888888;
